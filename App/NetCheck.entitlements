@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  NOT sandboxed (App Sandbox absent) — required so getifaddrs + raw interface reads work,
+	  and so we avoid Sparkle's sandbox-XPC entitlement dance. Distribution is DMG/Homebrew, not MAS.
+	  disable-library-validation lets the (ad-hoc / locally-signed) Sparkle framework load under
+	  Hardened Runtime. When you switch to Developer ID signing later, this can stay or be removed.
+	-->
+	<key>com.apple.security.cs.disable-library-validation</key>
+	<true/>
+</dict>
+</plist>

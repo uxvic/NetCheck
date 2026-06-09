@@ -1,0 +1,50 @@
+name: Release
+
+# Push a tag like v1.0.1 to build, package, sign the appcast, and publish a GitHub Release.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-14
+    env:
+      SPARKLE_VERSION: "2.6.4"   # bump to the version you build against
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tooling
+        run: brew install xcodegen create-dmg
+
+      - name: Download Sparkle tools
+        run: |
+          curl -fL -o sparkle.tar.xz \
+            "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz"
+          mkdir -p .sparkle && tar -xf sparkle.tar.xz -C .sparkle
+
+      - name: Build + package (ad-hoc signed)
+        env:
+          SIGN_IDENTITY: "-"          # later: a Developer ID identity imported from a secret
+          SPARKLE_BIN: ".sparkle/bin"
+        run: ./scripts/sign_and_package.sh
+
+      - name: Generate signed appcast
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}   # add this repo secret (M4)
+        run: |
+          echo "$SPARKLE_PRIVATE_KEY" | .sparkle/bin/generate_appcast \
+            --ed-key-file - \
+            --download-url-prefix "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/" \
+            dist/
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.dmg
+            dist/appcast.xml
+          # SUFeedURL points at .../releases/latest/download/appcast.xml, so attaching
+          # appcast.xml to each release is all that's needed — no GitHub Pages required.

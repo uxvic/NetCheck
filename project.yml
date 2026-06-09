@@ -1,0 +1,51 @@
+name: NetCheck
+options:
+  bundleIdPrefix: com.victoradedini
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+packages:
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    from: "2.5.0"
+
+settings:
+  base:
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"               # Swift 5 language mode for v1 (concurrency = warnings, not errors). Migrate to "6.0" later.
+    PRODUCT_BUNDLE_IDENTIFIER: com.victoradedini.NetCheck
+    ENABLE_HARDENED_RUNTIME: YES       # set now so notarization is a one-line flip later
+    CODE_SIGN_STYLE: Manual
+    CODE_SIGN_IDENTITY: "-"            # ad-hoc; on the laptop you can switch to your free Apple ID team in Xcode > Signing
+    DEAD_CODE_STRIPPING: YES
+    MARKETING_VERSION_NOTE: "bump MARKETING_VERSION + CURRENT_PROJECT_VERSION on every release"
+
+targets:
+  NetCheck:
+    type: application
+    platform: macOS
+    sources:
+      - path: App
+        excludes:
+          - "Info.plist"
+          - "NetCheck.entitlements"
+      - Monitoring
+      - MenuBar
+      - UI
+      - Services
+      - Resources
+    dependencies:
+      - package: Sparkle
+    settings:
+      base:
+        INFOPLIST_FILE: App/Info.plist
+        CODE_SIGN_ENTITLEMENTS: App/NetCheck.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        COMBINE_HIDPI_IMAGES: YES
+        LD_RUNPATH_SEARCH_PATHS:
+          - "$(inherited)"
+          - "@executable_path/../Frameworks"
