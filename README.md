@@ -22,13 +22,16 @@ It exists for one specific frustration: **a VPN that stays "connected" while you
 
 ## Install (for users)
 
-**Homebrew (recommended — installs with no Gatekeeper warning):**
+**Homebrew:**
 ```sh
 brew tap uxvic/netcheck
 brew install --cask netcheck
 ```
+(On recent Homebrew, if the tap is reported untrusted, run `brew trust uxvic/netcheck` first.)
 
-**Direct download:** grab `NetCheck-x.y.z.dmg` from [Releases](https://github.com/uxvic/NetCheck/releases), open it, drag NetCheck to Applications. The first launch is blocked because the app isn't notarized yet — open **System Settings → Privacy & Security**, scroll to the NetCheck prompt, and click **Open Anyway**. (One time only.)
+**Direct download:** grab `NetCheck-x.y.z.dmg` from [Releases](https://github.com/uxvic/NetCheck/releases), open it, drag NetCheck to Applications.
+
+**First launch (either method):** NetCheck isn't notarized (no paid Apple Developer account), so macOS shows a one-time Gatekeeper prompt — open **System Settings → Privacy & Security**, scroll to the NetCheck prompt, and click **Open Anyway**. (One time only; updates afterward are automatic and silent via Sparkle, which strips the quarantine flag.) Power users can skip it with `xattr -dr com.apple.quarantine /Applications/NetCheck.app`. The only way to remove this first-launch prompt entirely is the $99/yr Apple Developer Program (notarization).
 
 ---
 
