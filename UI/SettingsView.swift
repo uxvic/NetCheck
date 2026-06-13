@@ -10,9 +10,11 @@ struct SettingsView: View {
     var body: some View {
         Form {
             Section("Menu Bar") {
-                Toggle("Show speed in the menu bar", isOn: $prefs.showSpeedInBar)
+                Toggle("Spin the globe with live speed", isOn: $prefs.spinningGlobeEnabled)
+                Toggle("Color the globe by status", isOn: $prefs.colorIconByState)
+                Toggle("Show speed number in the menu bar", isOn: $prefs.showSpeedInBar)
                 Toggle("Icon only (hide speed text)", isOn: $prefs.iconOnly)
-                Toggle("Color the icon by status", isOn: $prefs.colorIconByState)
+                    .disabled(!prefs.showSpeedInBar)
             }
 
             Section("Monitoring") {
@@ -27,6 +29,7 @@ struct SettingsView: View {
             }
 
             Section("Alerts & Startup") {
+                Toggle("Play a sound on disconnect / reconnect", isOn: $prefs.soundOnChangeEnabled)
                 Toggle("Notify on disconnect / reconnect", isOn: $prefs.notificationsEnabled)
                 Toggle("Launch at login", isOn: $launchAtLogin)
                     .onChange(of: launchAtLogin) { _, newValue in

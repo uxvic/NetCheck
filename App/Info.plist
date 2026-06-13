@@ -37,7 +37,7 @@
 	<key>SUFeedURL</key>
 	<string>https://github.com/uxvic/NetCheck/releases/latest/download/appcast.xml</string>
 	<key>SUPublicEDKey</key>
-	<string>REPLACE_WITH_SPARKLE_PUBLIC_ED_KEY</string>
+	<string>HZuanhvU4JlZJO/o0dp2eq0F40lVp6um4H+oeinuqM8=</string>
 	<key>SUEnableAutomaticChecks</key>
 	<true/>
 	<key>SUScheduledCheckInterval</key>

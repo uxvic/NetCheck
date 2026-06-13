@@ -20,6 +20,8 @@ final class Preferences {
     var showSpeedInBar: Bool { didSet { d.set(showSpeedInBar, forKey: Keys.showSpeedInBar) } }
     var iconOnly: Bool { didSet { d.set(iconOnly, forKey: Keys.iconOnly) } }
     var colorIconByState: Bool { didSet { d.set(colorIconByState, forKey: Keys.colorIconByState) } }
+    var spinningGlobeEnabled: Bool { didSet { d.set(spinningGlobeEnabled, forKey: Keys.spinningGlobeEnabled) } }
+    var soundOnChangeEnabled: Bool { didSet { d.set(soundOnChangeEnabled, forKey: Keys.soundOnChangeEnabled) } }
     var notificationsEnabled: Bool { didSet { d.set(notificationsEnabled, forKey: Keys.notificationsEnabled) } }
     var activeProbingEnabled: Bool { didSet { d.set(activeProbingEnabled, forKey: Keys.activeProbingEnabled) } }
     var probeIntervalSeconds: Int { didSet { d.set(probeIntervalSeconds, forKey: Keys.probeIntervalSeconds) } }
@@ -31,6 +33,8 @@ final class Preferences {
         static let showSpeedInBar = "showSpeedInBar"
         static let iconOnly = "iconOnly"
         static let colorIconByState = "colorIconByState"
+        static let spinningGlobeEnabled = "spinningGlobeEnabled"
+        static let soundOnChangeEnabled = "soundOnChangeEnabled"
         static let notificationsEnabled = "notificationsEnabled"
         static let activeProbingEnabled = "activeProbingEnabled"
         static let probeIntervalSeconds = "probeIntervalSeconds"
@@ -39,9 +43,12 @@ final class Preferences {
 
     init() {
         let store = UserDefaults.standard
-        showSpeedInBar = (store.object(forKey: Keys.showSpeedInBar) as? Bool) ?? true
+        // Default to glance-only: the spinning globe shows status; the number lives one click away.
+        showSpeedInBar = (store.object(forKey: Keys.showSpeedInBar) as? Bool) ?? false
         iconOnly = (store.object(forKey: Keys.iconOnly) as? Bool) ?? false
         colorIconByState = (store.object(forKey: Keys.colorIconByState) as? Bool) ?? true
+        spinningGlobeEnabled = (store.object(forKey: Keys.spinningGlobeEnabled) as? Bool) ?? true
+        soundOnChangeEnabled = (store.object(forKey: Keys.soundOnChangeEnabled) as? Bool) ?? true
         notificationsEnabled = (store.object(forKey: Keys.notificationsEnabled) as? Bool) ?? true
         activeProbingEnabled = (store.object(forKey: Keys.activeProbingEnabled) as? Bool) ?? true
         probeIntervalSeconds = (store.object(forKey: Keys.probeIntervalSeconds) as? Int) ?? 10

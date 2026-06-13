@@ -64,7 +64,7 @@ codesign -f -s "$SIGN_IDENTITY" --options runtime --timestamp \
 # --- DMG ---
 mkdir -p "$DIST"
 DMG="$DIST/$APP_NAME-$VERSION.dmg"
-rm -f "$DMG"
+rm -f "$DMG" "$DIST"/rw.*.dmg          # clear stale temps that otherwise make create-dmg fail
 echo "▶︎ Creating DMG…"
 create-dmg \
   --volname "$APP_NAME" \
@@ -72,6 +72,18 @@ create-dmg \
   --icon "$APP_NAME.app" 120 170 \
   --app-drop-link 380 170 \
   "$DMG" "$APP" >/dev/null 2>&1 || true
+rm -f "$DIST"/rw.*.dmg
+
+# Fallback: a styled DMG needs Finder/AppleScript, which can fail headless. A plain hdiutil DMG
+# is just as installable, so guarantee one lands either way.
+if [ ! -f "$DMG" ]; then
+  echo "▶︎ create-dmg didn't produce a DMG; building a plain one via hdiutil…"
+  STAGE="$DIST/.stage"; rm -rf "$STAGE"; mkdir -p "$STAGE"
+  cp -R "$APP" "$STAGE/"
+  ln -s /Applications "$STAGE/Applications"
+  hdiutil create -volname "$APP_NAME" -srcfolder "$STAGE" -ov -format UDZO "$DMG" >/dev/null
+  rm -rf "$STAGE"
+fi
 [ -f "$DMG" ] || { echo "✗ DMG creation failed"; exit 1; }
 echo "✓ $DMG"
 

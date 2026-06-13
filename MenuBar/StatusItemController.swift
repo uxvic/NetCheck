@@ -12,6 +12,21 @@ final class StatusItemController {
     private let panel: PanelHostController
     private var menu: NSMenu!
 
+    /// The live animated globe shown in the default (glance) mode.
+    private let globe = SpinningGlobe()
+    /// Fixed width for globe-only mode so tier/glyph changes can't nudge neighbours.
+    private let globeLength: CGFloat = 28
+
+    /// Fixed bar width so neither the item nor its neighbours ever move. Measured from the widest
+    /// realistic title plus a generous icon allowance (surplus shows as constant right-side
+    /// padding, which never shifts; erring generous avoids clipping fast/gigabit values).
+    private lazy var fixedBarLength: CGFloat = {
+        let widest = BarRenderer.attributedSpeed(down: 999 * 1024 * 1024, up: 999 * 1024 * 1024)
+        let iconAllowance: CGFloat = 24   // SF Symbol footprint at pointSize 13
+        let spacing: CGFloat = 8          // image–title gap + edge padding, generous
+        return ceil(widest.size().width) + iconAllowance + spacing
+    }()
+
     init(monitor: NetworkMonitor, prefs: Preferences, updater: UpdaterController, actions: PanelActions) {
         self.monitor = monitor
         self.prefs = prefs
@@ -30,7 +45,9 @@ final class StatusItemController {
         button.target = self
         button.action = #selector(handleClick)
         button.sendAction(on: [.leftMouseUp, .rightMouseUp])
-        button.imagePosition = .imageLeading
+        button.imagePosition = .imageOnly
+        statusItem.length = globeLength   // give the button a real width before the globe attaches
+        globe.attach(to: button)
     }
 
     @objc private func handleClick() {
@@ -70,6 +87,7 @@ final class StatusItemController {
                 _ = prefs.showSpeedInBar
                 _ = prefs.iconOnly
                 _ = prefs.colorIconByState
+                _ = prefs.spinningGlobeEnabled
             } onChange: { [weak self] in
                 Task { @MainActor in
                     self?.render()
@@ -83,35 +101,44 @@ final class StatusItemController {
     private func render() {
         guard let button = statusItem.button else { return }
         let snap = monitor.snapshot
+        let rt = snap.state.rateTier(downBytesPerSec: snap.downBytesPerSec)
+        let tier = rt.colorTier
+        let showText = prefs.showSpeedInBar && !prefs.iconOnly
 
-        let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .semibold)
-        let image = NSImage(systemSymbolName: snap.state.symbolName, accessibilityDescription: snap.state.title)?
-            .withSymbolConfiguration(config)
-        if prefs.colorIconByState {
-            image?.isTemplate = false
-            button.contentTintColor = color(for: snap.state)
-        } else {
+        if showText {
+            // Opt-in: static globe + fixed-width number (the constant-width path keeps it jitter-free).
+            globe.setHidden(true)
+            statusItem.length = fixedBarLength
+            let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .semibold)
+            let image = NSImage(systemSymbolName: "globe", accessibilityDescription: snap.state.title)?
+                .withSymbolConfiguration(config)
             image?.isTemplate = true
-            button.contentTintColor = nil
-        }
-        button.image = image
-
-        if prefs.iconOnly || !prefs.showSpeedInBar {
-            button.attributedTitle = NSAttributedString(string: "")
-            button.imagePosition = .imageOnly
-        } else {
+            button.image = image
+            button.contentTintColor = prefs.colorIconByState ? nsColor(for: tier) : nil
             button.imagePosition = .imageLeading
             button.attributedTitle = BarRenderer.attributedSpeed(down: snap.downBytesPerSec, up: snap.upBytesPerSec)
+        } else {
+            // Default: the live spinning globe carries everything; the number lives one click away.
+            button.image = nil
+            button.contentTintColor = nil
+            button.attributedTitle = NSAttributedString(string: "")
+            button.imagePosition = .imageOnly
+            statusItem.length = globeLength
+            globe.relayout()
+            globe.setHidden(false)
+            let spin = prefs.spinningGlobeEnabled && rt.spins
+            globe.update(tier: tier, colorize: prefs.colorIconByState,
+                         spin: spin, bytesPerSec: snap.downBytesPerSec)
         }
         button.toolTip = tooltip(for: snap)
     }
 
-    private func color(for state: ConnectivityState) -> NSColor {
-        switch state {
-        case .online: return .systemGreen
-        case .checking: return .secondaryLabelColor
-        case .captivePortal: return .systemOrange
-        case .offline, .vpnNoInternet: return .systemRed
+    private func nsColor(for tier: StatusTier) -> NSColor {
+        switch tier {
+        case .good: return .systemGreen
+        case .neutral: return .labelColor
+        case .warn: return .systemOrange
+        case .bad: return .systemRed
         }
     }
 

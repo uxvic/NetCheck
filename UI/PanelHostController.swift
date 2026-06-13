@@ -8,9 +8,11 @@ final class PanelHostController {
 
     init(monitor: NetworkMonitor, prefs: Preferences, actions: PanelActions) {
         popover.behavior = .transient
-        popover.contentSize = NSSize(width: 320, height: 380)
-        popover.contentViewController = NSHostingController(
+        let hosting = NSHostingController(
             rootView: DetailPanel(monitor: monitor, prefs: prefs, actions: actions))
+        hosting.sizingOptions = [.preferredContentSize]   // popover sizes to the SwiftUI content
+        hosting.view.appearance = NSAppearance(named: .darkAqua)  // dark bubble to match the panel
+        popover.contentViewController = hosting
     }
 
     func toggle(relativeTo button: NSStatusBarButton) {

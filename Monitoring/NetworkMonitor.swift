@@ -10,6 +10,12 @@ final class NetworkMonitor {
     private(set) var snapshot = NetworkSnapshot()
     private(set) var history: [RateSample] = []
 
+    /// On-demand bandwidth measurement (for the "what tier am I on?" readout when idle).
+    private(set) var isSpeedTesting = false
+    private(set) var lastTestMbps: Double?
+    private(set) var lastTestAt: Date?
+    private let speedTester = SpeedTester()
+
     struct RateSample: Identifiable, Equatable {
         let id: Int
         let down: Double
@@ -26,6 +32,7 @@ final class NetworkMonitor {
 
     private let prefs: Preferences
     private let notifier: Notifier
+    private let sound = SoundPlayer()
 
     private var tickTask: Task<Void, Never>?
     private var probeTask: Task<Void, Never>?
@@ -191,7 +198,19 @@ final class NetworkMonitor {
     }
 
     private func notifyTransition(from old: ConnectivityState, to new: ConnectivityState) {
-        guard prefs.notificationsEnabled, old != .checking else { return }
+        // `.checking` is the launch / post-wake placeholder — never alert on the first resolve.
+        guard old != .checking else { return }
+
+        // Audible cue, independent of banner notifications.
+        if prefs.soundOnChangeEnabled {
+            switch new {
+            case .offline, .vpnNoInternet: sound.playLost()
+            case .online where old.isProblem: sound.playRestored()
+            default: break
+            }
+        }
+
+        guard prefs.notificationsEnabled else { return }
         switch new {
         case .offline:
             notifier.notify(title: "Internet disconnected", body: "No connection could be reached.")
@@ -207,6 +226,22 @@ final class NetworkMonitor {
             }
         case .checking:
             break
+        }
+    }
+
+    // MARK: - Speed test (on demand)
+
+    func runSpeedTest() {
+        guard !isSpeedTesting else { return }
+        isSpeedTesting = true
+        Task { [weak self] in
+            guard let self else { return }
+            let result = try? await self.speedTester.measure()
+            self.isSpeedTesting = false
+            if let result {
+                self.lastTestMbps = result
+                self.lastTestAt = Date()
+            }
         }
     }
 
