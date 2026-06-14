@@ -91,6 +91,10 @@ enum RateTier {
         default: return true
         }
     }
+
+    /// A real connectivity problem (worth colouring even in "only on problems" mode), as opposed
+    /// to a merely slow/idle speed tier.
+    var isProblem: Bool { self == .offline || self == .signIn }
 }
 
 /// The kind of interface currently carrying traffic.

@@ -11,7 +11,11 @@ struct SettingsView: View {
         Form {
             Section("Menu Bar") {
                 Toggle("Spin the globe with live speed", isOn: $prefs.spinningGlobeEnabled)
-                Toggle("Color the globe by status", isOn: $prefs.colorIconByState)
+                Picker("Globe colour", selection: $prefs.globeColorMode) {
+                    ForEach(GlobeColorMode.allCases) { Text($0.label).tag($0) }
+                }
+                Text("Turn off spin and choose \u{201C}Only when there's a problem\u{201D} for a calm icon that still flags disconnections. (Spin also follows macOS Reduce Motion.)")
+                    .font(.caption2).foregroundStyle(.secondary)
                 Toggle("Show speed number in the menu bar", isOn: $prefs.showSpeedInBar)
                 Toggle("Icon only (hide speed text)", isOn: $prefs.iconOnly)
                     .disabled(!prefs.showSpeedInBar)

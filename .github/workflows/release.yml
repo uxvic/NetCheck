@@ -1,9 +1,13 @@
 name: Release
 
-# Push a tag like v1.0.1 to build, package, sign the appcast, and publish a GitHub Release.
+# NOTE: auto-build on tag push is disabled. The Liquid Glass UI (macOS 26 SDK / Xcode 26) doesn't
+# compile on GitHub-hosted runners yet, so releases are built locally with
+# scripts/sign_and_package.sh + generate_appcast. Re-enable the `push: tags` trigger below once a
+# macOS 26 runner with Xcode 26 is available.
 on:
-  push:
-    tags: ["v*"]
+  workflow_dispatch:
+  # push:
+  #   tags: ["v*"]
 
 permissions:
   contents: write

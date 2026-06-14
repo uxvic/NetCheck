@@ -86,7 +86,7 @@ final class StatusItemController {
                 _ = monitor.snapshot
                 _ = prefs.showSpeedInBar
                 _ = prefs.iconOnly
-                _ = prefs.colorIconByState
+                _ = prefs.globeColorMode
                 _ = prefs.spinningGlobeEnabled
             } onChange: { [weak self] in
                 Task { @MainActor in
@@ -102,7 +102,8 @@ final class StatusItemController {
         guard let button = statusItem.button else { return }
         let snap = monitor.snapshot
         let rt = snap.state.rateTier(downBytesPerSec: snap.downBytesPerSec)
-        let tier = rt.colorTier
+        let displayTier = colorTier(for: rt)
+        let colorize = prefs.globeColorMode != .off
         let showText = prefs.showSpeedInBar && !prefs.iconOnly
 
         if showText {
@@ -114,7 +115,7 @@ final class StatusItemController {
                 .withSymbolConfiguration(config)
             image?.isTemplate = true
             button.image = image
-            button.contentTintColor = prefs.colorIconByState ? nsColor(for: tier) : nil
+            button.contentTintColor = colorize ? nsColor(for: displayTier) : nil
             button.imagePosition = .imageLeading
             button.attributedTitle = BarRenderer.attributedSpeed(down: snap.downBytesPerSec, up: snap.upBytesPerSec)
         } else {
@@ -127,10 +128,20 @@ final class StatusItemController {
             globe.relayout()
             globe.setHidden(false)
             let spin = prefs.spinningGlobeEnabled && rt.spins
-            globe.update(tier: tier, colorize: prefs.colorIconByState,
+            globe.update(tier: displayTier, colorize: colorize,
                          spin: spin, bytesPerSec: snap.downBytesPerSec)
         }
         button.toolTip = tooltip(for: snap)
+    }
+
+    /// Resolve the colour tier under the user's colour-mode preference: full tiers, problems-only
+    /// (slow/fast stay neutral, offline/sign-in keep their colour), or off (always neutral).
+    private func colorTier(for rt: RateTier) -> StatusTier {
+        switch prefs.globeColorMode {
+        case .off: return .neutral
+        case .problems: return rt.isProblem ? rt.colorTier : .neutral
+        case .full: return rt.colorTier
+        }
     }
 
     private func nsColor(for tier: StatusTier) -> NSColor {
