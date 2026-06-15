@@ -4,6 +4,7 @@ import SwiftUI
 struct SettingsView: View {
     @Bindable var prefs: Preferences
     let updater: UpdaterController
+    var onResetData: () -> Void = {}
 
     @State private var launchAtLogin = LoginItem.isEnabled
 
@@ -40,6 +41,12 @@ struct SettingsView: View {
                         LoginItem.setEnabled(newValue)
                         launchAtLogin = LoginItem.isEnabled
                     }
+            }
+
+            Section("Data usage") {
+                Button("Reset data statistics", role: .destructive) { onResetData() }
+                Text("Counts traffic on your active network interface while NetCheck is running (internet + local network).")
+                    .font(.caption2).foregroundStyle(.secondary)
             }
 
             Section("Updates") {

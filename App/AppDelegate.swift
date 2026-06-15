@@ -33,7 +33,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func openSettings() {
         if settingsWindow == nil {
-            let hosting = NSHostingController(rootView: SettingsView(prefs: prefs, updater: updater))
+            let hosting = NSHostingController(rootView: SettingsView(
+                prefs: prefs, updater: updater,
+                onResetData: { [weak self] in self?.monitor.usage.reset() }))
             let window = NSWindow(contentViewController: hosting)
             window.title = "NetCheck Settings"
             window.styleMask = [.titled, .closable, .miniaturizable]

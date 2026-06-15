@@ -88,6 +88,7 @@ final class StatusItemController {
                 _ = prefs.iconOnly
                 _ = prefs.globeColorMode
                 _ = prefs.spinningGlobeEnabled
+                _ = monitor.lastTestMbps
             } onChange: { [weak self] in
                 Task { @MainActor in
                     self?.render()
@@ -101,7 +102,7 @@ final class StatusItemController {
     private func render() {
         guard let button = statusItem.button else { return }
         let snap = monitor.snapshot
-        let rt = snap.state.rateTier(downBytesPerSec: snap.downBytesPerSec)
+        let rt = monitor.displayedRateTier()   // tested-if-recent, else live — matches the panel card
         let displayTier = colorTier(for: rt)
         let colorize = prefs.globeColorMode != .off
         let showText = prefs.showSpeedInBar && !prefs.iconOnly

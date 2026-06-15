@@ -8,11 +8,12 @@ struct DetailPanel: View {
     let monitor: NetworkMonitor
     let prefs: Preferences
     let actions: PanelActions
+    @State private var dataPeriod: DataPeriod = .today
 
     var body: some View {
         let snap = monitor.snapshot
         VStack(alignment: .leading, spacing: 12) {
-            legend(current: highlightTier(snap))
+            legend(current: displayedTier(snap))
             Divider()
             details(snap)
             SparklineView(samples: monitor.history).frame(height: 40)
@@ -43,38 +44,20 @@ struct DetailPanel: View {
     }
 
     private func isShowingTested() -> Bool {
-        guard let at = monitor.lastTestAt else { return false }
+        guard monitor.snapshot.state == .online, let at = monitor.lastTestAt else { return false }
         return Date().timeIntervalSince(at) < 300
     }
 
-    /// Tier from a raw Mbps figure (no idle band — used for tested results).
-    private func tier(forMbps m: Double) -> RateTier {
-        if m >= RateTier.fastFloorMbps { return .fast }
-        if m >= RateTier.slowCeilingMbps { return .normal }
-        if m >= RateTier.idleFloorMbps { return .slow }
-        return .idle
-    }
-
-    /// Which legend row to highlight: the tested tier if recent, else the live rate tier.
-    private func highlightTier(_ snap: NetworkSnapshot) -> RateTier {
-        isShowingTested() ? tier(forMbps: monitor.lastTestMbps ?? 0)
-                          : snap.state.rateTier(downBytesPerSec: snap.downBytesPerSec)
-    }
-
-    /// The category label shown on the card: state problems win, else the (tested or live) tier.
-    private func categoryLabel(_ snap: NetworkSnapshot) -> String {
-        switch snap.state {
-        case .offline, .vpnNoInternet: return "Offline"
-        case .captivePortal: return "Sign-in"
-        default:
-            return isShowingTested() ? tier(forMbps: monitor.lastTestMbps ?? 0).label
-                                     : snap.state.rateTier(downBytesPerSec: snap.downBytesPerSec).label
-        }
+    /// The single tier the whole UI shows — globe colour AND card — computed in one place on the
+    /// monitor so the menu-bar globe and the panel can never disagree.
+    private func displayedTier(_ snap: NetworkSnapshot) -> RateTier {
+        monitor.displayedRateTier()
     }
 
     // MARK: - Hero (the gradient card, bottom-anchored)
 
     @ViewBuilder private func hero(_ snap: NetworkSnapshot) -> some View {
+        let dt = displayedTier(snap)
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Label(heroTitle(snap), systemImage: "globe")
@@ -95,7 +78,7 @@ struct DetailPanel: View {
                         .font(.system(size: 38, weight: .medium, design: .rounded)).monospacedDigit()
                     Text("Mbps").font(.system(size: 15)).opacity(0.92)
                     Spacer()
-                    Text(categoryLabel(snap))
+                    Text(dt.label)
                         .font(.system(size: 15, weight: .semibold))
                         .padding(.horizontal, 11).padding(.vertical, 4)
                         .background(.white.opacity(0.24), in: Capsule())
@@ -112,7 +95,7 @@ struct DetailPanel: View {
         .foregroundStyle(.white)
         .padding(14)
         .background(
-            LinearGradient(colors: heroColors(snap.state), startPoint: .bottom, endPoint: .top),
+            LinearGradient(colors: heroColors(dt), startPoint: .bottom, endPoint: .top),
             in: RoundedRectangle(cornerRadius: 16, style: .continuous)
         )
     }
@@ -151,14 +134,16 @@ struct DetailPanel: View {
         return iface + snap.state.title
     }
 
-    /// `[bottom, top]` — both shades dark enough for white text to clear AA contrast.
-    private func heroColors(_ state: ConnectivityState) -> [Color] {
+    /// Card gradient by **speed tier**: fast/normal/idle → green, slow/sign-in → amber, offline → red,
+    /// checking → slate. `[bottom, top]`; both shades are dark enough for white text to clear WCAG AA
+    /// (white-on-each measures ≥ ~5:1).
+    private func heroColors(_ tier: RateTier) -> [Color] {
         func c(_ r: Double, _ g: Double, _ b: Double) -> Color { Color(.sRGB, red: r, green: g, blue: b) }
-        switch state {
-        case .online:                   return [c(0.078, 0.478, 0.271), c(0.043, 0.322, 0.188)] // deep emerald
-        case .checking:                 return [c(0.337, 0.384, 0.439), c(0.227, 0.263, 0.310)] // slate
-        case .captivePortal:            return [c(0.706, 0.325, 0.035), c(0.541, 0.239, 0.024)] // deep amber
-        case .offline, .vpnNoInternet:  return [c(0.776, 0.180, 0.180), c(0.561, 0.114, 0.114)] // deep red
+        switch tier {
+        case .fast, .normal, .idle:  return [c(0.078, 0.478, 0.271), c(0.043, 0.322, 0.188)] // deep emerald
+        case .slow, .signIn:         return [c(0.706, 0.325, 0.035), c(0.541, 0.239, 0.024)] // deep amber
+        case .checking:              return [c(0.337, 0.384, 0.439), c(0.227, 0.263, 0.310)] // slate
+        case .offline:               return [c(0.776, 0.180, 0.180), c(0.561, 0.114, 0.114)] // deep red
         }
     }
 
@@ -211,6 +196,7 @@ struct DetailPanel: View {
                 Button { actions.refreshPublicIP() } label: { Image(systemName: "arrow.clockwise") }
                     .buttonStyle(.borderless)
             }
+            dataUsedRow()
             if snap.isExpensive {
                 detailRow("Network", "Metered / Expensive")
             }
@@ -223,6 +209,51 @@ struct DetailPanel: View {
             Spacer()
             Text(value).font(.caption)
         }
+    }
+
+    // MARK: - Data used (one row + period switch)
+
+    private enum DataPeriod: String, CaseIterable, Identifiable {
+        case today, week, month, year
+        var id: String { rawValue }
+        var label: String {
+            switch self {
+            case .today: return "Today"
+            case .week:  return "This week"
+            case .month: return "This month"
+            case .year:  return "This year"
+            }
+        }
+    }
+
+    private func usageFor(_ p: DataPeriod) -> DataUsageTracker.Usage {
+        switch p {
+        case .today: return monitor.usage.today
+        case .week:  return monitor.usage.week
+        case .month: return monitor.usage.month
+        case .year:  return monitor.usage.year
+        }
+    }
+
+    /// A single line, like Interface / Public IP — with a compact menu to switch the period.
+    private func dataUsedRow() -> some View {
+        HStack(spacing: 6) {
+            Text("Data used").font(.caption).foregroundStyle(.secondary)
+            Picker("", selection: $dataPeriod) {
+                ForEach(DataPeriod.allCases) { Text($0.label).tag($0) }
+            }
+            .labelsHidden().pickerStyle(.menu).fixedSize().controlSize(.small)
+            Spacer()
+            Text(fmtBytes(usageFor(dataPeriod).total)).font(.caption).monospacedDigit()
+        }
+    }
+
+    private func fmtBytes(_ b: UInt64) -> String {
+        let units = ["B", "KB", "MB", "GB", "TB"]
+        var v = Double(b); var i = 0
+        while v >= 1024 && i < units.count - 1 { v /= 1024; i += 1 }
+        if i == 0 { return "\(b) B" }
+        return v < 10 ? String(format: "%.1f %@", v, units[i]) : String(format: "%.0f %@", v, units[i])
     }
 
     @ViewBuilder private var footer: some View {

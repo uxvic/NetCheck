@@ -13,8 +13,8 @@ packages:
 
 settings:
   base:
-    MARKETING_VERSION: "1.0.1"
-    CURRENT_PROJECT_VERSION: "2"
+    MARKETING_VERSION: "1.0.2"
+    CURRENT_PROJECT_VERSION: "3"
     SWIFT_VERSION: "5.0"               # Swift 5 language mode for v1 (concurrency = warnings, not errors). Migrate to "6.0" later.
     PRODUCT_BUNDLE_IDENTIFIER: com.victoradedini.NetCheck
     ENABLE_HARDENED_RUNTIME: YES       # set now so notarization is a one-line flip later

@@ -23,10 +23,13 @@ actor ThroughputSampler {
         lastUp = 0
     }
 
-    func tick(interfaceName: String?) -> (down: Double, up: Double) {
+    /// Returns the instantaneous rate AND the exact byte delta since the previous sample. The raw
+    /// `downBytes`/`upBytes` are what the data-usage tracker accumulates (exact, wrap-safe), rather
+    /// than `rate × time` which would drift.
+    func tick(interfaceName: String?) -> (down: Double, up: Double, downBytes: UInt64, upBytes: UInt64) {
         guard let interfaceName else {
             reset()
-            return (0, 0)
+            return (0, 0, 0, 0)
         }
         let counters = Self.readCounters(for: interfaceName)
         let now = ProcessInfo.processInfo.systemUptime
@@ -36,12 +39,12 @@ actor ThroughputSampler {
             lastTime = now
             primed = true
         }
-        guard primed, lastTime > 0 else { return (0, 0) }
+        guard primed, lastTime > 0 else { return (0, 0, 0, 0) }
         let elapsed = now - lastTime
-        guard elapsed > 0.05 else { return (0, 0) }
+        guard elapsed > 0.05 else { return (0, 0, 0, 0) }
         let downDelta = counters.down &- lastDown   // wrap-safe modular subtraction
         let upDelta = counters.up &- lastUp
-        return (Double(downDelta) / elapsed, Double(upDelta) / elapsed)
+        return (Double(downDelta) / elapsed, Double(upDelta) / elapsed, UInt64(downDelta), UInt64(upDelta))
     }
 
     /// Reads cumulative in/out bytes for a specific interface name (e.g. "en0", "utun3").

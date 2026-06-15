@@ -10,6 +10,9 @@ final class NetworkMonitor {
     private(set) var snapshot = NetworkSnapshot()
     private(set) var history: [RateSample] = []
 
+    /// Cumulative data usage — today / this week / this month / this year.
+    let usage = DataUsageTracker()
+
     /// On-demand bandwidth measurement (for the "what tier am I on?" readout when idle).
     private(set) var isSpeedTesting = false
     private(set) var lastTestMbps: Double?
@@ -92,6 +95,7 @@ final class NetworkMonitor {
             lastInterfaceName = name
         }
         let rate = await sampler.tick(interfaceName: name)
+        usage.record(downBytes: rate.downBytes, upBytes: rate.upBytes)
         let a = 0.4   // EMA smoothing so the bar text doesn't jitter
         let down = a * rate.down + (1 - a) * snapshot.downBytesPerSec
         let up = a * rate.up + (1 - a) * snapshot.upBytesPerSec
@@ -243,6 +247,21 @@ final class NetworkMonitor {
                 self.lastTestAt = Date()
             }
         }
+    }
+
+    /// The rate tier the UI displays (menu-bar globe colour AND the panel card): a recent speed-test
+    /// result while online, otherwise the live rate. Connectivity problems always win over a stale
+    /// test. Computed in ONE place so the globe and the panel can never disagree.
+    func displayedRateTier(now: Date = Date()) -> RateTier {
+        let live = snapshot.state.rateTier(downBytesPerSec: snapshot.downBytesPerSec)
+        if live == .offline || live == .signIn || live == .checking { return live }
+        if let m = lastTestMbps, let at = lastTestAt, now.timeIntervalSince(at) < 300 {
+            if m >= RateTier.fastFloorMbps { return .fast }
+            if m >= RateTier.slowCeilingMbps { return .normal }
+            if m >= RateTier.idleFloorMbps { return .slow }
+            return .idle
+        }
+        return live
     }
 
     // MARK: - Public IP (on demand)
