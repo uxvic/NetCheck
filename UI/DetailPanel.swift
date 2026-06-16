@@ -78,10 +78,11 @@ struct DetailPanel: View {
                         .font(.system(size: 38, weight: .medium, design: .rounded)).monospacedDigit()
                     Text("Mbps").font(.system(size: 15)).opacity(0.92)
                     Spacer()
+                    // Status word (Idle / Fast / …) — a plain text label, not a pill,
+                    // so it doesn't read as a tappable button next to the real one.
                     Text(dt.label)
                         .font(.system(size: 15, weight: .semibold))
-                        .padding(.horizontal, 11).padding(.vertical, 4)
-                        .background(.white.opacity(0.24), in: Capsule())
+                        .opacity(0.95)
                 }
             }
 
@@ -246,6 +247,7 @@ struct DetailPanel: View {
             Spacer()
             Text(fmtBytes(usageFor(dataPeriod).total)).font(.caption).monospacedDigit()
         }
+        .help("Traffic through the active interface (internet + local network) measured while NetCheck is running; resets when this Mac restarts. macOS doesn’t expose a true internet-only or per-app total.")
     }
 
     private func fmtBytes(_ b: UInt64) -> String {

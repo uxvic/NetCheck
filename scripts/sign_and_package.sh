@@ -26,15 +26,23 @@ SIGN_IDENTITY="${SIGN_IDENTITY:--}"
 echo "▶︎ Generating Xcode project (xcodegen)…"
 xcodegen generate
 
-echo "▶︎ Building $CONFIG…"
+echo "▶︎ Building $CONFIG (universal: arm64 + x86_64)…"
+# ARCHS/ONLY_ACTIVE_ARCH are also set in project.yml, but a plain `build` action
+# narrows to the active arch unless they're passed on the command line — so we
+# force them here to guarantee a fat (Intel + Apple Silicon) binary every release.
 xcodebuild \
   -project "$APP_NAME.xcodeproj" \
   -scheme "$SCHEME" \
   -configuration "$CONFIG" \
   -derivedDataPath "$DERIVED" \
+  ARCHS="arm64 x86_64" \
+  ONLY_ACTIVE_ARCH=NO \
   CODE_SIGN_IDENTITY="$SIGN_IDENTITY" \
   CODE_SIGN_STYLE=Manual \
   build | tail -8
+
+echo "▶︎ Verifying universal binary…"
+lipo -archs "$DERIVED/Build/Products/$CONFIG/$APP_NAME.app/Contents/MacOS/$APP_NAME"
 
 APP="$DERIVED/Build/Products/$CONFIG/$APP_NAME.app"
 [ -d "$APP" ] || { echo "✗ Build product not found at $APP"; exit 1; }

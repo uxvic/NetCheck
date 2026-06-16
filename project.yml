@@ -13,8 +13,8 @@ packages:
 
 settings:
   base:
-    MARKETING_VERSION: "1.0.2"
-    CURRENT_PROJECT_VERSION: "3"
+    MARKETING_VERSION: "1.0.3"
+    CURRENT_PROJECT_VERSION: "4"
     SWIFT_VERSION: "5.0"               # Swift 5 language mode for v1 (concurrency = warnings, not errors). Migrate to "6.0" later.
     PRODUCT_BUNDLE_IDENTIFIER: com.victoradedini.NetCheck
     ENABLE_HARDENED_RUNTIME: YES       # set now so notarization is a one-line flip later
@@ -22,6 +22,12 @@ settings:
     CODE_SIGN_IDENTITY: "-"            # ad-hoc; on the laptop you can switch to your free Apple ID team in Xcode > Signing
     DEAD_CODE_STRIPPING: YES
     MARKETING_VERSION_NOTE: "bump MARKETING_VERSION + CURRENT_PROJECT_VERSION on every release"
+  configs:
+    Debug:
+      ONLY_ACTIVE_ARCH: YES            # fast dev builds: just this machine's arch
+    Release:
+      ONLY_ACTIVE_ARCH: NO             # ship a universal binary…
+      ARCHS: "arm64 x86_64"            # …Apple Silicon + Intel (Sparkle.framework is already fat)
 
 targets:
   NetCheck:
