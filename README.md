@@ -22,6 +22,10 @@ It exists for one specific frustration: **a VPN that stays "connected" while you
 
 ## Install (for users)
 
+NetCheck runs on **macOS** (menu bar) and **Windows** (system tray) — same living-globe status, same active reachability check.
+
+### macOS (14+)
+
 **Homebrew:**
 ```sh
 brew tap uxvic/netcheck
@@ -29,9 +33,17 @@ brew install --cask netcheck
 ```
 (On recent Homebrew, if the tap is reported untrusted, run `brew trust uxvic/netcheck` first.)
 
-**Direct download:** grab `NetCheck-x.y.z.dmg` from [Releases](https://github.com/uxvic/NetCheck/releases), open it, drag NetCheck to Applications.
+**Direct download:** grab `NetCheck-x.y.z.dmg` from the [latest macOS release](https://github.com/uxvic/NetCheck/releases/latest), open it, drag NetCheck to Applications.
 
 **First launch (either method):** NetCheck isn't notarized (no paid Apple Developer account), so macOS shows a one-time Gatekeeper prompt — open **System Settings → Privacy & Security**, scroll to the NetCheck prompt, and click **Open Anyway**. (One time only; updates afterward are automatic and silent via Sparkle, which strips the quarantine flag.) Power users can skip it with `xattr -dr com.apple.quarantine /Applications/NetCheck.app`. The only way to remove this first-launch prompt entirely is the $99/yr Apple Developer Program (notarization).
+
+### Windows (10/11)
+
+The Windows build is a separate native app (Tauri) and lives in its own repo: **[uxvic/netcheck-windows](https://github.com/uxvic/netcheck-windows)**.
+
+**Download:** grab `NetCheck_x.y.z_x64-setup.exe` from the [latest Windows release](https://github.com/uxvic/netcheck-windows/releases/latest) and run it.
+
+**First launch:** the installer isn't code-signed yet, so Windows SmartScreen shows *"Windows protected your PC"* — click **More info → Run anyway** (it's safe; that's just the unsigned-app warning). NetCheck then lives in your **system tray** — click the `^` (show hidden icons) by the clock to find the globe, and click it to open the panel. The Windows build adds **accurate data-usage** read straight from Windows' own accounting.
 
 ---
 
